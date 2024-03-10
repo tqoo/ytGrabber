@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QFont
-import backend
+import dlpBackend, threading
 app = QApplication([])
 
 class VideoWindow(QWidget):
@@ -39,9 +39,10 @@ class VideoWindow(QWidget):
         self.show()
 
     def grab_video(self):
-        videoStatusWidget = VideoDownloaderStatus("a","b")
+        videoStatusWidget = VideoDownloaderStatus("a","https://www.youtube.com/watch?v=CH50zuS8DD0")
         self.scrollBoxLayout.addWidget(videoStatusWidget)
-        # pass on to "backend"
+        grabVideoThread = threading.Thread(target=videoStatusWidget.grab_video)
+        grabVideoThread.start()
 
 class VideoDownloaderStatus(QWidget):
     def __init__(self, img, title):
@@ -63,12 +64,19 @@ class VideoDownloaderStatus(QWidget):
         videoName.setFont(videoNameFont)
         infoLayout.addWidget(videoName,0,0)
 
-        progressBar = QProgressBar()
-        progressBar.setValue(0)
-        infoLayout.addWidget(progressBar,1,0)
+        self.progressBar = QProgressBar()
+        self.progressBar.setValue(0)
+        self.progressBar.valueChanged.connect(lambda: print("value changed"))
+        infoLayout.addWidget(self.progressBar,1,0)
         
         self.setLayout(mainLayout)
         self.show()
+
+    def grab_video(self):
+        # pass on to "backend"
+        grabber = dlpBackend.Grabber("https://www.youtube.com/watch?v=CH50zuS8DD0", self.progressBar)
+        grabber.download()
+
 # start the event loop
 
 window = VideoWindow()
