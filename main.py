@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QFont
+from PyQt6.QtCore import QThread
 import dlpBackend, threading
 app = QApplication([])
 
@@ -39,10 +40,10 @@ class VideoWindow(QWidget):
         self.show()
 
     def grab_video(self):
-        videoStatusWidget = VideoDownloaderStatus("a","https://www.youtube.com/watch?v=CH50zuS8DD0")
+        videoStatusWidget = VideoDownloaderStatus("a","https://www.youtube.com/watch?v=dQw4w9WgXcQ")
         self.scrollBoxLayout.addWidget(videoStatusWidget)
-        grabVideoThread = threading.Thread(target=videoStatusWidget.grab_video)
-        grabVideoThread.start()
+        videoStatusWidget.grab_video()
+
 
 class VideoDownloaderStatus(QWidget):
     def __init__(self, img, title):
@@ -60,13 +61,14 @@ class VideoDownloaderStatus(QWidget):
         videoName = QLabel(self.videoTitle)
         videoNameFont = QFont()
         videoNameFont.setBold(True)
-        videoNameFont.setPixelSize(20)
+        videoNameFont.setPixelSize(10)
         videoName.setFont(videoNameFont)
         infoLayout.addWidget(videoName,0,0)
 
         self.progressBar = QProgressBar()
+        self.progressBar.setRange(0,100)
         self.progressBar.setValue(0)
-        self.progressBar.valueChanged.connect(lambda: print("value changed"))
+        #self.progressBar.valueChanged.connect(lambda: app.processEvents() )
         infoLayout.addWidget(self.progressBar,1,0)
         
         self.setLayout(mainLayout)
@@ -74,10 +76,26 @@ class VideoDownloaderStatus(QWidget):
 
     def grab_video(self):
         # pass on to "backend"
-        grabber = dlpBackend.Grabber("https://www.youtube.com/watch?v=CH50zuS8DD0", self.progressBar)
-        grabber.download()
+        self.thread = QThread()
+        self.grabber = dlpBackend.Grabber("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 
-# start the event loop
+        self.grabber.moveToThread(self.thread)
+
+        self.thread.started.connect(self.grabber.download)
+        self.grabber.finished.connect(self.thread.quit)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.grabber.progressSig.connect(self.setProgress)
+
+        self.progressBar.setValue(0)
+        self.thread.start()
+
+    def setProgress(self, value):
+        if value > self.progressBar.value():
+            self.progressBar.setValue(value)
+        app.processEvents()
+
+# start the  loop
 
 window = VideoWindow()
 app.exec()

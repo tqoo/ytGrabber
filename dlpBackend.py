@@ -1,13 +1,15 @@
 from yt_dlp import YoutubeDL
 from pprint import pprint
-
-class Grabber():
-    def __init__(self, URL, progressBar):
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QObject, pyqtSignal
+class Grabber(QObject):
+    progressSig = pyqtSignal(int)
+    finished = pyqtSignal()
+    def __init__(self, URL):
+        super().__init__()
         self.url = URL
         self.progress = 0
         self.thumbnail = ""
-        self.progressBar = progressBar
-        print(progressBar.__dict__)
     def download(self):
         ydl_opts = {
             'progress_hooks': [self.progress_hook],
@@ -23,7 +25,8 @@ class Grabber():
                 self.progress = d["downloaded_bytes"]/d["total_bytes"]
             else:
                 self.progress = d["downloaded_bytes"]/d["total_bytes_estimate"]
-                self.progressBar.setValue(int(self.progress*100))
+                if self.progress != 1.0:
+                    self.progressSig.emit(int(self.progress*100))
                 
         elif d["status"] == "finished":
             print("Done!")
